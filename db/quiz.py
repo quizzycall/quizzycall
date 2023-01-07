@@ -18,7 +18,7 @@ def CreateTimeout(timeout: TimeOutW):
 
 def CreateAnswer(answer: AnswerOption):
     answer = dict(answer)
-    answer_db = Answer(title=answer["title"])
+    answer_db = Answer(answer=answer["answer"])
     session.add(answer_db)
     session.commit()
     return answer_db.id
@@ -27,7 +27,8 @@ def CreateQuestion(question: QuestionW):
     question = dict(question)
     right_answer_id = 0
     list_answers_ids = []
-    for answer in question["answer_option"]:
+    for answer in question["answer_options"]:
+        answer = dict(answer)
         if answer["answer"] == question["right_answer"]:
             right_answer_db = CreateAnswer(answer)
             right_answer_id = right_answer_db

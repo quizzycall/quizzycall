@@ -51,3 +51,6 @@ def create_quiz(quiz: QuestionW):
     session.add(quiz_db)
     session.commit()
     return dict(quiz_db)
+
+def get_quiz_by_id(id: int):
+    return session.exec(select(Quiz).where(Quiz.id==id)).first().json()

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, Request, Response
+from fastapi import APIRouter, Depends, BackgroundTasks, Request
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from db.user import login_user, create_user, validate_email_token
 from validation import registration
@@ -31,4 +31,4 @@ async def login_usr(user: OAuth2PasswordRequestForm = Depends(), check=Depends(c
 @user_api.get('/email-validation')
 async def email_validation(token: str):
     if validate_email_token(token):
-        return Response(status_code=200, content={'msg': 'Success email validation'})
+        return {'msg': 'Success email validation'}

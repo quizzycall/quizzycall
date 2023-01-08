@@ -41,3 +41,7 @@ def validate_email_token(token: str):
     result.is_email_verified = True
     session.commit()
     return True
+
+
+def get_user_data(login: str):
+    return session.exec(select(Users).where(Users.email == login or Users.nickname == login)).first()

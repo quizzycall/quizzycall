@@ -18,6 +18,6 @@ def verify_token(token: str):
         login = decoded_token.get('login')
         if login:
             return login
-        raise HTTPException(status_code=401, detail='Invalid token')
+        raise HTTPException(status_code=400, detail='Invalid token')
     except JWTError:
-        raise HTTPException(status_code=401, detail='Invalid token')
+        raise HTTPException(status_code=400, detail='Invalid token')

@@ -1,11 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from validation.quiz import Quiz
-from db.quiz import CreateQuiz
+from db.quiz import create_quiz
+from security.jwt import verify_token
+from db.user import get_user_data
 
 quiz_api = APIRouter()
 
 @quiz_api.post("/create_quiz")
-async def create_quiz(quiz: Quiz):
+async def create_quiz_url(quiz: Quiz, token: str):
     """
 {
   "creator_id": 0,
@@ -32,6 +34,7 @@ async def create_quiz(quiz: Quiz):
   "start": false
 }
     """
-
-
-    return CreateQuiz(quiz)
+    creator_id = get_user_data(verify_token(token)).id
+    quiz = dict(quiz)
+    quiz["creator_id"] = creator_id
+    return create_quiz(quiz)

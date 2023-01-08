@@ -20,6 +20,7 @@ def create_user(user: RegistrationUser):
     user_db = Users(email=user["email"], hashed_password=hashed_password, nickname=user["nickname"])
     session.add(user_db)
     session.commit()
+
     return create_token({'login': user["nickname"]})
 
 
@@ -41,3 +42,6 @@ def validate_email_token(token: str):
     result.is_email_verified = True
     session.commit()
     return True
+
+def get_user_data(login: str):
+    return session.exec(select(Users).where(Users.email == login or Users.nickname == login)).first()

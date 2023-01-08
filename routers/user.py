@@ -10,7 +10,9 @@ user_api = APIRouter()
 
 @user_api.post("/registration_user")
 async def registration_user(req: Request, back_tasks: BackgroundTasks, user: registration.RegistrationUser, check=Depends(check_if_logged_in)):
-    res = {'access_token': create_user(user), 'token_type': 'bearer'}
+    token = create_user(user)
+    print(token)
+    res = {'access_token': token, 'token_type': 'bearer'}
     mail = await send_email(dict(user)['email'], req.url_for('email_validation') + f"?token={res['access_token']}")
     back_tasks.add_task(mail.get('fm').send_message, mail.get('message'))
     return res
@@ -31,4 +33,4 @@ async def login_usr(user: OAuth2PasswordRequestForm = Depends(), check=Depends(c
 @user_api.get('/email-validation')
 async def email_validation(token: str):
     if validate_email_token(token):
-        return Response(status_code=200, content={'msg': 'Success email validation'})
+        return {'msg': 'Success email validation'}

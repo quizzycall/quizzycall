@@ -3,12 +3,13 @@ from pydantic import BaseModel
 from datetime import date, datetime, time, timedelta
 
 class AnswerOption(BaseModel):
-    answer: str
+    title: str
+    is_right: bool = False
 
 class Question(BaseModel):
     title: str
     answer_options: list[AnswerOption]
-    right_answer: str
+
     amount_points: int
 
 class TimeOut(BaseModel):
@@ -17,7 +18,7 @@ class TimeOut(BaseModel):
     seconds: int
 
 class Quiz(BaseModel):
-    creator_id: int
+    creator_id: int = None
     title: str
     timeout: TimeOut
     questions: list[Question]

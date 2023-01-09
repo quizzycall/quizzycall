@@ -7,3 +7,4 @@ class Users(SQLModel, table=True):
     hashed_password: str
     nickname: str
     is_email_verified: bool = Field(default=False)
+    phone: int = Field(default=None)

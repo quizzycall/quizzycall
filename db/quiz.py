@@ -1,13 +1,7 @@
-from sqlmodel import SQLModel, Session, create_engine, select
+from sqlmodel import select
 from db.models.quiz import Quiz, Question, Answer, TimeOut 
 from validation.quiz import AnswerOption, Question as QuestionW, Quiz as QuizW, TimeOut as TimeOutW
-import os
-
-engine = create_engine(os.getenv("PSQL_URL"))
-
-SQLModel.metadata.create_all(engine)
-
-session = Session(engine)
+from .settings import session
 
 def create_timeout(timeout: TimeOutW):
     timeout = dict(timeout)

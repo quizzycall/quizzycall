@@ -21,3 +21,10 @@ def verify_token(token: str):
         raise HTTPException(status_code=400, detail='Invalid token')
     except JWTError:
         raise HTTPException(status_code=400, detail='Invalid token')
+
+
+def decode_token(token: str):
+    try:
+        return jwt.decode(token, cfg.SECRET_KEY, algorithms=[cfg.ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=400, detail='Invalid token')

@@ -8,3 +8,4 @@ class Users(SQLModel, table=True):
     nickname: str
     is_email_verified: bool = Field(default=False)
     phone: int = Field(default=None)
+    is_admin: bool = Field(default=False)

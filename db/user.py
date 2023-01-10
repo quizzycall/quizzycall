@@ -16,6 +16,8 @@ def create_user(user: RegistrationUser):
         raise HTTPException(status_code=400, detail='Nickname is already registered')
     hashed_password = PasswordHash().get_password_hash(user["password"])
     user_db = Users(email=user["email"], hashed_password=hashed_password, nickname=user["nickname"])
+    if user.get('phone'):
+        user_db.phone = user['phone']
     session.add(user_db)
     session.commit()
 
@@ -40,6 +42,7 @@ def validate_email_token(token: str):
     result.is_email_verified = True
     session.commit()
     return True
+
 
 def get_user_data(login: str):
     return session.exec(select(Users).where(Users.email == login or Users.nickname == login)).first()

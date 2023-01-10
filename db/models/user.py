@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, BigInteger, Column
 
 
 class Users(SQLModel, table=True):
@@ -9,3 +9,4 @@ class Users(SQLModel, table=True):
     is_email_verified: bool = Field(default=False)
     phone: int = Field(default=None)
     is_admin: bool = Field(default=False)
+    points: int = Field(default=0, sa_column=Column(BigInteger()))

@@ -1,21 +1,19 @@
 from fastapi import HTTPException
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
-from sqlmodel import SQLModel, Session, create_engine, select
+from sqlmodel import select
 from db.models.user import Users
 from validation.registration import RegistrationUser
 from security.password import PasswordHash
 from security.jwt import create_token, verify_token
-from security.config import Config as cfg
-
-engine = create_engine(cfg.PSQL_URL, pool_pre_ping=True)
-
-SQLModel.metadata.create_all(engine)
-
-session = Session(engine)
+from .settings import session
 
 
 def create_user(user: RegistrationUser):
     user = dict(user)
+    if session.exec(select(Users).where(Users.email == user['email'])).first():
+        raise HTTPException(status_code=400, detail='Email is already registered')
+    elif session.exec(select(Users).where(Users.nickname == user['nickname'])).first():
+        raise HTTPException(status_code=400, detail='Nickname is already registered')
     hashed_password = PasswordHash().get_password_hash(user["password"])
     user_db = Users(email=user["email"], hashed_password=hashed_password, nickname=user["nickname"])
     session.add(user_db)

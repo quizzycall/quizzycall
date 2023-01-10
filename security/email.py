@@ -1,3 +1,4 @@
+from fastapi import BackgroundTasks
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from security.config import Config as cfg
 from pydantic import EmailStr
@@ -26,3 +27,29 @@ async def send_email(email: EmailStr, url: str):
 
     fm = FastMail(conf)
     return {'fm': fm, 'message': message}
+
+
+async def send_change_password_email(email: EmailStr, url: str, back_tasks: BackgroundTasks):
+    html = f"""<a href={url}>Подтвердите изменение пароля</a>"""
+    message = MessageSchema(
+        subject="[Quizzycall] Подтверждение изменения пароля",
+        recipients=[email],
+        body=html,
+        subtype=MessageType.html)
+
+    fm = FastMail(conf)
+    back_tasks.add_task(fm.send_message, message)
+    return {'msg': 'Password change email was sent'}
+
+
+async def send_email_changing(new_email: EmailStr, url: str, back_tasks: BackgroundTasks):
+    html = f"""<a href={url}>Подтвердите изменение почты</a>"""
+    message = MessageSchema(
+        subject="[Quizzycall] Подтверждение изменения почты",
+        recipients=[new_email],
+        body=html,
+        subtype=MessageType.html)
+
+    fm = FastMail(conf)
+    back_tasks.add_task(fm.send_message, message)
+    return {'msg': 'Email change was sent'}

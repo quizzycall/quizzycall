@@ -11,7 +11,6 @@ user_api = APIRouter()
 @user_api.post("/registration_user")
 async def registration_user(req: Request, back_tasks: BackgroundTasks, user: registration.RegistrationUser, check=Depends(check_if_logged_in)):
     token = create_user(user)
-    print(token)
     res = {'access_token': token, 'token_type': 'bearer'}
     mail = await send_email(dict(user)['email'], req.url_for('email_validation') + f"?token={res['access_token']}")
     back_tasks.add_task(mail.get('fm').send_message, mail.get('message'))

@@ -3,10 +3,9 @@ from validation.quiz import Quiz
 from db.quiz import create_quiz, get_quiz_by_id, start_quiz
 from security.jwt import verify_token
 from db.user import get_user_data
-from routers.solver import solver_api
 
 quiz_api = APIRouter()
-quiz_api.include_router(solver_api, prefix="/solver")
+
 
 @quiz_api.post("/create_quiz")
 async def create_quiz_url(quiz: Quiz, token: str):

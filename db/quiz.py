@@ -47,4 +47,17 @@ def create_quiz(quiz: QuestionW):
     return dict(quiz_db)
 
 def get_quiz_by_id(id: int):
-    return session.exec(select(Quiz).where(Quiz.id==id)).first().json()
+    return session.exec(select(Quiz).where(Quiz.id==id)).first()
+
+def get_question_by_id(id: int):
+    return session.exec(select(Question).where(Question.id==id)).first()
+
+def get_answer_by_id(id: int):
+    return session.exec(select(Answer).where(Answer.id==id)).first()
+
+def start_quiz(id, int):
+    quiz = get_quiz_by_id(id)
+    quiz.start = True
+    session.add(quiz)
+    session.commit()
+    session.refresh(quiz)

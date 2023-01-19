@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import date, datetime, time, timedelta
 
@@ -26,4 +26,13 @@ class Quiz(BaseModel):
     amount_users: int
     start: bool = False
 
+class QuestionWebSocketResponse(BaseModel):
+    id: int
+    title: str
+    answers: List[AnswerOption]
 
+class QuizWebSocketResponse(BaseModel):
+    id: int
+    creator_id: int
+    title: str
+    questions: List[QuestionWebSocketResponse]

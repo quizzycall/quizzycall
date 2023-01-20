@@ -71,23 +71,25 @@ async def start_quiz_url(id: int, login=Depends(get_current_user)):
         start_quiz(id)
 
 
-#html routes for test
-#--------
+# html routes for test
+# --------
 @quiz_api.get('/client/session_quiz/{id}')
 async def client_session_quiz_url(req: Request, id: int, token: str):
     return templates.TemplateResponse('index.html', {'request': req, 'id': id, 'token': token})
 
 
+@quiz_api.get('/client/session_quiz_creator/{id}')
+async def client_session_quiz_creator_url(req: Request, id: int, token: str):
+    return templates.TemplateResponse('creator.html', {'request': req, 'id': id, 'token': token})
+# --------
+
 
 @quiz_api.websocket("/session_quiz/{id}")
 async def session_quiz_url(websocket: WebSocket, id: int, token: str):
-    print(verify_token(token))
     if rooms.get(id) and get_quiz_by_id(id):
         user = get_user_data(verify_token(token))
-        print(rooms)
         manager = rooms.get(id)
         await manager.connect(websocket)
-
         await manager.broadcast({"message": f"User {user.nickname} connected!",
                                  "amount_questions": len(get_quiz_by_id(id).questions_id)})
         try:
@@ -95,8 +97,29 @@ async def session_quiz_url(websocket: WebSocket, id: int, token: str):
                 data_wb = await websocket.receive_text()
                 data_wb = json.loads(data_wb)
                 await manager.broadcast(data_wb)
-        except Exception as e:
-            print(e, 5676)
+        except:
             manager.disconnect(websocket)
             await manager.broadcast({"message": f"User {user.nickname} disconnected!"})
 
+
+@quiz_api.websocket("/session_quiz_creator/{id}")
+async def session_quiz_creator_url(websocket: WebSocket, id: int, token: str):
+    # print(verify_token(token))
+    # if rooms.get(id) and get_quiz_by_id(id):
+    #     user = get_user_data(verify_token(token))
+    #     print(rooms)
+    #     manager = rooms.get(id)
+    #     await manager.connect(websocket)
+    #
+    #     await manager.broadcast({"message": f"User {user.nickname} connected!",
+    #                              "amount_questions": len(get_quiz_by_id(id).questions_id)})
+    #     try:
+    #         while True:
+    #             data_wb = await websocket.receive_text()
+    #             data_wb = json.loads(data_wb)
+    #             await manager.broadcast(data_wb)
+    #     except Exception as e:
+    #         print(e, 5676)
+    #         manager.disconnect(websocket)
+    #         await manager.broadcast({"message": f"User {user.nickname} disconnected!"})
+    pass

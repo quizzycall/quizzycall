@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>QuizzyCall</h1>
+        
+        <button onclick="cellClick('a1')">a1</button>
+        <button onclick="cellClick('a2')">a2</button>
+        <button onclick="cellClick('a3')">a3</button>
+        <button onclick="cellClick('a4')">a4</button>
+        <ul id='messages'>
+
+        </ul>
+        <script>
+            var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz/{{id}}?token={{token}}");;
+            function createSession(event){
+                ws.send(JSON.stringify({name: content}))
+            }
+            
+            function cellClick(id) {
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode('you choosed ' + id)
+                message.appendChild(content)
+                messages.appendChild(message)
+                ws.send(JSON.stringify({answer: id})) 
+            }
+            ws.onmessage = function(event) {
+<!--                if (event.data == '"started"') {-->
+<!--                    ws.send(JSON.stringify({msg: event.data}))-->
+<!--                } else if (JSON.parse(event.data)['right_a']) {-->
+<!--                    ws.send(event.data)-->
+<!--                }-->
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode(event.data)
+                message.appendChild(content)
+                messages.appendChild(message)
+            };
+
+        </script>
+    </body>
+</html>

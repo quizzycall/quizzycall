@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>QuizzyCall</h1>
+
+<!--        <button onclick="cellClick('pin')">pin</button>-->
+        <button onclick="cellClick('started')">start</button>
+        <button onclick="cellClick('skip')">skip</button>
+        <button onclick="cellClick('next')">next</button>
+        <ul id='messages'>
+
+        </ul>
+        <script>
+            var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz_creator/{{id}}?token={{token}}");;
+
+            function cellClick(id) {
+                ws.send(JSON.stringify({msg_creator: id}))
+
+            }
+
+            ws.onmessage = function(event) {
+<!--                if (JSON.parse(event.data).right_a){-->
+<!--                    right_a = JSON.parse(event.data).right_a-->
+<!--                    alert(JSON.stringify({'right_a': right_a}))-->
+<!--                }-->
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode(event.data)
+                message.appendChild(content)
+                messages.appendChild(message)
+            };
+        </script>
+
+    </body>
+</html>

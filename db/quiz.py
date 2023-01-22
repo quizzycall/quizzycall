@@ -76,6 +76,46 @@ def get_answer_by_id(id: int):
     return session.exec(select(Answer).where(Answer.id == id)).first()
 
 
+def query_to_dict(query):
+    res = {}
+    for k, v in query:
+        res[k] = v
+    del res['_sa_instance_state']
+    return res
+
+
+def prepare_question(id: int):
+    question = query_to_dict(get_question_by_id(id))
+    question['answers'] = []
+    for a in question['answers_id']:
+        answer = query_to_dict(get_answer_by_id(a))
+        if question.get('right_answer_id') and a == question['right_answer_id']:
+            del question['right_answer_id']
+            question['right_answer'] = answer
+        question['answers'].append(answer)
+    del question['answers_id']
+    return question
+
+
+def answers_for_front(question: dict):
+    answers = {}
+    num_of_answer = 1
+    for a in question['answers']:
+        answers[num_of_answer] = a
+        num_of_answer += 1
+    return answers
+
+
+def results_of_question(data: list):
+    res = {}
+    for i in data:
+        if not res.get(i['answer']['title']):
+            res[i['answer']['title']] = 1
+        else:
+            res[i['answer']['title']] += 1
+    return res
+
+
 def start_quiz(id: int):
     quiz = get_quiz_by_id(id)
     quiz.start = True

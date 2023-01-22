@@ -6,38 +6,49 @@
     <body>
         <h1>QuizzyCall</h1>
         
-        <button onclick="cellClick('a1')">a1</button>
-        <button onclick="cellClick('a2')">a2</button>
-        <button onclick="cellClick('a3')">a3</button>
-        <button onclick="cellClick('a4')">a4</button>
+        <button id="0"></button>
+        <button id="1"></button>
+        <button id="2"></button>
+        <button id="3"></button>
         <ul id='messages'>
 
         </ul>
+
         <script>
             var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz/{{id}}?token={{token}}");;
             function createSession(event){
                 ws.send(JSON.stringify({name: content}))
             }
             
-            function cellClick(id) {
+            function cellClick(data) {
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
-                var content = document.createTextNode('you choosed ' + id)
+                var content = document.createTextNode('you choosed ' + data.title)
                 message.appendChild(content)
                 messages.appendChild(message)
-                ws.send(JSON.stringify({answer: id})) 
+                ws.send(JSON.stringify({answer: data}))
             }
             ws.onmessage = function(event) {
-<!--                if (event.data == '"started"') {-->
-<!--                    ws.send(JSON.stringify({msg: event.data}))-->
-<!--                } else if (JSON.parse(event.data)['right_a']) {-->
-<!--                    ws.send(event.data)-->
-<!--                }-->
-                var messages = document.getElementById('messages')
-                var message = document.createElement('li')
-                var content = document.createTextNode(event.data)
-                message.appendChild(content)
-                messages.appendChild(message)
+                if (JSON.parse(event.data).question) {
+                    var messages = document.getElementById('messages')
+                    var answers = JSON.parse(event.data).question.answers
+                    for (answer in answers) {
+                        var button = document.createElement('button');
+
+                        button.data = answers[answer];
+                        button.innerHTML = answers[answer].title;
+                        button.addEventListener("click", function(e) {
+                            cellClick(e.target.data);
+                        });
+                        messages.appendChild(button)
+                    }
+                } else {
+                    var messages = document.getElementById('messages');
+                    var message = document.createElement('li');
+                    var content = document.createTextNode(event.data);
+                    message.appendChild(content);
+                    messages.appendChild(message);
+                }
             };
 
         </script>

@@ -1,6 +1,7 @@
 from sqlmodel import select
 from db.models.quiz import Quiz, Question, Answer, TimeOut 
 from validation.quiz import AnswerOption, Question as QuestionW, Quiz as QuizW, TimeOut as TimeOutW
+from .user import get_user_data
 from .settings import session
 
 
@@ -43,9 +44,7 @@ def create_question(question: QuestionW):
 
 
 def create_quiz(quiz: QuestionW):
-    print(quiz)
     quiz = dict(quiz)
-    print(quiz)
     questions_id = []
     for question in quiz["questions"]:
         question_db = create_question(question)
@@ -60,7 +59,6 @@ def create_quiz(quiz: QuestionW):
     session.add(quiz_db)
     session.commit()
     session.refresh(quiz_db)
-    print(dict(quiz_db))
     return dict(quiz_db)
 
 
@@ -76,6 +74,10 @@ def get_answer_by_id(id: int):
     return session.exec(select(Answer).where(Answer.id == id)).first()
 
 
+def get_timeout_by_id(id: int):
+    return session.exec(select(TimeOut).where(TimeOut.id == id)).first()
+
+
 def query_to_dict(query):
     res = {}
     for k, v in query:
@@ -86,13 +88,13 @@ def query_to_dict(query):
 
 def prepare_question(id: int):
     question = query_to_dict(get_question_by_id(id))
-    question['answers'] = []
+    question['_answers'] = []
     for a in question['answers_id']:
         answer = query_to_dict(get_answer_by_id(a))
         if question.get('right_answer_id') and a == question['right_answer_id']:
             del question['right_answer_id']
             question['right_answer'] = answer
-        question['answers'].append(answer)
+        question['_answers'].append(answer)
     del question['answers_id']
     return question
 
@@ -100,20 +102,25 @@ def prepare_question(id: int):
 def answers_for_front(question: dict):
     answers = {}
     num_of_answer = 1
-    for a in question['answers']:
+    for a in question['_answers']:
         answers[num_of_answer] = a
         num_of_answer += 1
     return answers
 
 
-def results_of_question(data: list):
+def results_of_question(data: dict):
     res = {}
-    for i in data:
-        if not res.get(i['answer']['title']):
-            res[i['answer']['title']] = 1
-        else:
-            res[i['answer']['title']] += 1
+    for k, _ in data.items():
+        res[k] = len(data[k])
     return res
+
+
+def sum_points(data: dict):
+    for name, points in data.items():
+        user = get_user_data(name)
+        user.points += points
+        session.add(user)
+    session.commit()
 
 
 def start_quiz(id: int):

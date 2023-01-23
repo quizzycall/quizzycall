@@ -6,16 +6,13 @@
     <body>
         <h1>QuizzyCall</h1>
         
-        <button id="0"></button>
-        <button id="1"></button>
-        <button id="2"></button>
-        <button id="3"></button>
+
         <ul id='messages'>
 
         </ul>
 
         <script>
-            var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz/{{id}}?token={{token}}");;
+            var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz/{{room_id}}?token={{token}}");;
             function createSession(event){
                 ws.send(JSON.stringify({name: content}))
             }
@@ -23,7 +20,7 @@
             function cellClick(data) {
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
-                var content = document.createTextNode('you choosed ' + data.title)
+                var content = document.createTextNode('you chose ' + data.title)
                 message.appendChild(content)
                 messages.appendChild(message)
                 ws.send(JSON.stringify({answer: data}))
@@ -31,7 +28,7 @@
             ws.onmessage = function(event) {
                 if (JSON.parse(event.data).question) {
                     var messages = document.getElementById('messages')
-                    var answers = JSON.parse(event.data).question.answers
+                    var answers = JSON.parse(event.data).question._answers
                     for (answer in answers) {
                         var button = document.createElement('button');
 

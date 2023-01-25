@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Optional, List
 from sqlmodel import Column, Field, SQLModel, Relationship, String, Integer
 from db.models.user import Users
@@ -29,3 +30,6 @@ class TimeOut(SQLModel, table=True):
     hours: int
     minutes: int
     seconds: int
+
+    def convert_to_secs(self):
+        return float(self.hours * 3600 + self.minutes * 60 + self.seconds)

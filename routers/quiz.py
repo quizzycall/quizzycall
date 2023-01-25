@@ -1,3 +1,5 @@
+import json
+import random
 from asyncio import wait_for
 from asyncio.exceptions import TimeoutError
 import traceback
@@ -55,8 +57,10 @@ class ConnectionManager:
         await self.broadcast({'question_results': self._answers, 'points': self._points})
         self._answers.clear()
 
-    async def finish_quiz(self):
+    async def finish_quiz(self, pin: int):
         await self.broadcast({'msg': 'quiz finished', 'points': self._points})
+        await run_in_threadpool(sum_points, self._points)
+        del rooms[pin]
 
     async def broadcast(self, data):
         if len(self.active_connections) > 0:
@@ -70,7 +74,14 @@ class ConnectionManager:
                     await connection.send_json(data)
 
 
-rooms = {}
+rooms: Dict[int, dict] = {}
+
+
+async def get_pin():
+    while True:
+        pin = random.randint(100000, 999999)
+        if pin not in rooms:
+            return pin
 
 
 @quiz_api.post("/create_quiz")
@@ -90,50 +101,61 @@ async def get_quiz_url(quiz_id: int, login=Depends(get_current_user)):
     return dict(get_quiz_by_id(quiz_id))
 
 
-@quiz_api.get("/create_room/{id}")
-async def create_room_url(quiz_id: int, login=Depends(get_current_user)):
+@quiz_api.get("/play_quiz/{id}")
+async def play_quiz(quiz_id: int, login=Depends(get_current_user)):
     quiz = get_quiz_by_id(quiz_id)
     id_user = get_user_data(login).id
     if quiz and quiz.creator_id == id_user:
-        rooms[quiz_id] = ConnectionManager()
-        return Response("Good create!", 200)
+        pin = await get_pin()
+        rooms[pin] = {'manager': ConnectionManager(), 'quiz_id': quiz_id}
+        return Response(json.dumps({'pin_code': pin}), 200)
     else:
         raise HTTPException(detail="You are not creator", status_code=403)
 
-
-@quiz_api.post("/start_quiz/{id}")
-async def start_quiz_url(quiz_id: int, login=Depends(get_current_user)):
-    quiz = get_quiz_by_id(quiz_id)
-    id_user = get_user_data(login).id
-    if quiz and quiz.creator_id == id_user:
-        start_quiz(quiz_id)
+# @quiz_api.get("/create_room/{id}")
+# async def create_room_url(quiz_id: int, login=Depends(get_current_user)):
+#     quiz = get_quiz_by_id(quiz_id)
+#     id_user = get_user_data(login).id
+#     if quiz and quiz.creator_id == id_user:
+#         rooms[quiz_id] = ConnectionManager()
+#         return Response("Good create!", 200)
+#     else:
+#         raise HTTPException(detail="You are not creator", status_code=403)
+#
+#
+# @quiz_api.post("/start_quiz/{id}")
+# async def start_quiz_url(quiz_id: int, login=Depends(get_current_user)):
+#     quiz = get_quiz_by_id(quiz_id)
+#     id_user = get_user_data(login).id
+#     if quiz and quiz.creator_id == id_user:
+#         start_quiz(quiz_id)
 
 
 # html routes for test
 # --------
-@quiz_api.get('/client/session_quiz/{room_id}')
-async def client_session_quiz_url(req: Request, room_id: int, token: str):
-    if rooms.get(room_id) and get_quiz_by_id(room_id):
-        return templates.TemplateResponse('index.html', {'request': req, 'room_id': room_id, 'token': token})
+@quiz_api.get('/client/session_quiz/{pin}')
+async def client_session_quiz_url(req: Request, pin: int, token: str):
+    if rooms.get(pin):
+        return templates.TemplateResponse('index.html', {'request': req, 'pin': pin, 'token': token})
     raise HTTPException(status_code=400)
 
 
-@quiz_api.get('/client/session_quiz_creator/{room_id}')
-async def client_session_quiz_creator_url(req: Request, room_id: int, token: str):
+@quiz_api.get('/client/session_quiz_creator/{pin}')
+async def client_session_quiz_creator_url(req: Request, pin: int, token: str):
     user = get_user_data(verify_token(token))
-    if rooms.get(room_id) and get_quiz_by_id(room_id).creator_id == user.id:
-        return templates.TemplateResponse('creator.html', {'request': req, 'room_id': room_id, 'token': token})
+    if rooms.get(pin) and get_quiz_by_id(rooms[pin]['quiz_id']).creator_id == user.id:
+        return templates.TemplateResponse('creator.html', {'request': req, 'pin': pin, 'token': token})
     raise HTTPException(status_code=400)
 # --------
 
 
-@quiz_api.websocket("/session_quiz/{room_id}")
-async def session_quiz_url(websocket: WebSocket, room_id: int, token: str):
+@quiz_api.websocket("/session_quiz/{pin}")
+async def session_quiz_url(websocket: WebSocket, pin: int, token: str):
     user = get_user_data(verify_token(token))
-    manager = rooms.get(room_id)
+    manager = rooms[pin]['manager']
     await manager.connect(websocket)
     await manager.broadcast({"message": f"User {user.nickname} connected!",
-                             "amount_questions": len(get_quiz_by_id(room_id).questions_id)})
+                             "amount_questions": len(get_quiz_by_id(rooms[pin]['quiz_id']).questions_id)})
     try:
         while True:
             data_wb = await websocket.receive_json()
@@ -144,19 +166,20 @@ async def session_quiz_url(websocket: WebSocket, room_id: int, token: str):
         await manager.broadcast({"message": f"User {user.nickname} disconnected!"})
 
 
-@quiz_api.websocket("/session_quiz_creator/{room_id}")
-async def session_quiz_creator_url(websocket: WebSocket, room_id: int, token: str):
+@quiz_api.websocket("/session_quiz_creator/{pin}")
+async def session_quiz_creator_url(websocket: WebSocket, pin: int, token: str):
     user = get_user_data(verify_token(token))
-    manager = rooms.get(room_id)
+    manager = rooms[pin]['manager']
+    quiz_id = rooms[pin]['quiz_id']
     await manager.connect(websocket)
     try:
         while True:
             data_wb = await websocket.receive_json()
             if data_wb.get('msg_creator') == 'started':
-                start_quiz(room_id)
+                start_quiz(quiz_id)
                 await manager.broadcast({'msg': 'started'})
                 break
-        quiz = query_to_dict(get_quiz_by_id(room_id))
+        quiz = query_to_dict(get_quiz_by_id(quiz_id))
 
         async def quiz_func():
             for q in quiz['questions_id']:
@@ -171,12 +194,10 @@ async def session_quiz_creator_url(websocket: WebSocket, room_id: int, token: st
                         break
         timeout = get_timeout_by_id(quiz['timeout_id']).convert_to_secs()
         await wait_for(quiz_func(), timeout=timeout)
-        await manager.finish_quiz()
-        await run_in_threadpool(sum_points, manager.points)
+        await manager.finish_quiz(pin)
     except TimeoutError:
         await manager.broadcast('timeout')
-        await manager.finish_quiz()
-        await run_in_threadpool(sum_points, manager.points)
+        await manager.finish_quiz(pin)
     except:
         print(traceback.format_exc())
         manager.disconnect(websocket)

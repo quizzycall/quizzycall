@@ -8,7 +8,8 @@ from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 from typing import List, Dict
 from validation.quiz import Quiz
-from db.quiz import create_quiz, get_quiz_by_id, start_quiz, query_to_dict, prepare_question, sum_points, get_timeout_by_id
+from db.quiz import create_quiz, get_quiz_by_id, start_quiz, query_to_dict, prepare_question, sum_points, \
+    get_timeout_by_id
 from security.jwt import verify_token
 from security.oauth import get_current_user
 from db.user import get_user_data
@@ -18,7 +19,8 @@ templates = Jinja2Templates(directory='templates')
 
 
 class ConnectionManager:
-    def __init__(self):
+    def __init__(self, amount_users: int):
+        self.amount_users = amount_users
         self.active_connections: List[WebSocket] = []
         self._answers: Dict[str, list] = {}
         self._points: Dict[str, int] = {}
@@ -28,8 +30,11 @@ class ConnectionManager:
         return self._points
 
     async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
+        if len(self.active_connections) >= self.amount_users + 1:
+            await websocket.send_json({'msg': 'Game is full'})
+        else:
+            await websocket.accept()
+            self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
@@ -93,11 +98,7 @@ async def create_quiz_url(quiz: Quiz, login=Depends(get_current_user)):
 
 
 @quiz_api.get("/get_quiz/{id}")
-async def get_quiz_url(quiz_id: int, login=Depends(get_current_user)):
-    # if login:
-    #     return dict(get_quiz_by_id(quiz_id))
-    # else:
-    #     return Response("You are not logged in", 400)
+async def get_quiz_url(quiz_id: int):
     return dict(get_quiz_by_id(quiz_id))
 
 
@@ -107,10 +108,11 @@ async def play_quiz(quiz_id: int, login=Depends(get_current_user)):
     id_user = get_user_data(login).id
     if quiz and quiz.creator_id == id_user:
         pin = await get_pin()
-        rooms[pin] = {'manager': ConnectionManager(), 'quiz_id': quiz_id}
+        rooms[pin] = {'manager': ConnectionManager(quiz.amount_users), 'quiz_id': quiz_id}
         return Response(json.dumps({'pin_code': pin}), 200)
     else:
         raise HTTPException(detail="You are not creator", status_code=403)
+
 
 # @quiz_api.get("/create_room/{id}")
 # async def create_room_url(quiz_id: int, login=Depends(get_current_user)):
@@ -133,6 +135,8 @@ async def play_quiz(quiz_id: int, login=Depends(get_current_user)):
 
 # html routes for test
 # --------
+
+
 @quiz_api.get('/client/session_quiz/{pin}')
 async def client_session_quiz_url(req: Request, pin: int, token: str):
     if rooms.get(pin):
@@ -146,6 +150,8 @@ async def client_session_quiz_creator_url(req: Request, pin: int, token: str):
     if rooms.get(pin) and get_quiz_by_id(rooms[pin]['quiz_id']).creator_id == user.id:
         return templates.TemplateResponse('creator.html', {'request': req, 'pin': pin, 'token': token})
     raise HTTPException(status_code=400)
+
+
 # --------
 
 
@@ -192,6 +198,7 @@ async def session_quiz_creator_url(websocket: WebSocket, pin: int, token: str):
                                                                question['amount_points'])
                     elif data_wb.get('msg_creator') == 'next':
                         break
+
         timeout = get_timeout_by_id(quiz['timeout_id']).convert_to_secs()
         await wait_for(quiz_func(), timeout=timeout)
         await manager.finish_quiz(pin)

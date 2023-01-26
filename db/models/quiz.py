@@ -1,8 +1,7 @@
-from datetime import timedelta
 from typing import Optional, List
-from sqlmodel import Column, Field, SQLModel, Relationship, String, Integer
-from db.models.user import Users
+from sqlmodel import Column, Field, SQLModel, Integer
 from sqlalchemy.dialects import postgresql
+
 
 class Quiz(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -13,6 +12,8 @@ class Quiz(SQLModel, table=True):
     questions_id: List[int] = Field(default=None, sa_column=Column(postgresql.ARRAY(Integer())))
     start: bool = False
     amount_users: int
+    group_id: int = None
+
 
 class Question(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -21,9 +22,11 @@ class Question(SQLModel, table=True):
     right_answer_id: int = Field(default=None, foreign_key="answer.id")
     amount_points: int
 
+
 class Answer(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str
+
 
 class TimeOut(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

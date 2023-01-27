@@ -12,7 +12,7 @@
         </ul>
 
         <script>
-            var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz/{{pin}}?token={{token}}");;
+            var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz/{{pin}}?token={{token}}&nickname={{nickname}}");;
             function createSession(event){
                 ws.send(JSON.stringify({name: content}))
             }

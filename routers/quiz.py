@@ -6,9 +6,10 @@ import traceback
 from fastapi import APIRouter, Request, Response, WebSocket, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
-from typing import List, Dict
+from typing import List, Dict, Optional
 from validation.quiz import Quiz
-from db.quiz import create_quiz, get_quiz_by_id, start_quiz, query_to_dict, prepare_question, sum_points, get_timeout_by_id
+from db.quiz import create_quiz, get_quiz_by_id, start_quiz, query_to_dict, prepare_question, sum_points, \
+    get_timeout_by_id
 from security.jwt import verify_token
 from security.oauth import get_current_user
 from db.user import get_user_data
@@ -18,7 +19,8 @@ templates = Jinja2Templates(directory='templates')
 
 
 class ConnectionManager:
-    def __init__(self):
+    def __init__(self, amount_users: int):
+        self.amount_users = amount_users
         self.active_connections: List[WebSocket] = []
         self._answers: Dict[str, list] = {}
         self._points: Dict[str, int] = {}
@@ -28,17 +30,25 @@ class ConnectionManager:
         return self._points
 
     async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
+        if len(self.active_connections) >= self.amount_users + 1:
+            raise HTTPException(400, 'Game is full.')
+        else:
+            await websocket.accept()
+            self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
 
-    def append_answer(self, answer: str, websocket: WebSocket, nickname: str, user_id: int):
-        if not self._answers.get(answer):
-            self._answers[answer] = [{'user_id': user_id, 'nickname': nickname, 'websocket': websocket}]
+    def append_answer(self, answer: str, websocket: WebSocket, nickname: str, anon: bool,
+                      user_id: Optional[int] = None):
+        if anon:
+            ans_dict = {'nickname': nickname, 'websocket': websocket}
         else:
-            self._answers[answer].append({'user_id': user_id, 'nickname': nickname, 'websocket': websocket})
+            ans_dict = {'user_id': user_id, 'nickname': nickname, 'websocket': websocket}
+        if not self._answers.get(answer):
+            self._answers[answer] = [ans_dict]
+        else:
+            self._answers[answer].append(ans_dict)
 
     async def right_answer_and_results(self, answer: str, points: int):
         for a, v in self._answers.items():
@@ -59,7 +69,8 @@ class ConnectionManager:
 
     async def finish_quiz(self, pin: int):
         await self.broadcast({'msg': 'quiz finished', 'points': self._points})
-        await run_in_threadpool(sum_points, self._points)
+        if not rooms[pin]['anon']:
+            await run_in_threadpool(sum_points, self._points)
         del rooms[pin]
 
     async def broadcast(self, data):
@@ -93,24 +104,21 @@ async def create_quiz_url(quiz: Quiz, login=Depends(get_current_user)):
 
 
 @quiz_api.get("/get_quiz/{id}")
-async def get_quiz_url(quiz_id: int, login=Depends(get_current_user)):
-    # if login:
-    #     return dict(get_quiz_by_id(quiz_id))
-    # else:
-    #     return Response("You are not logged in", 400)
+async def get_quiz_url(quiz_id: int):
     return dict(get_quiz_by_id(quiz_id))
 
 
 @quiz_api.get("/play_quiz/{id}")
-async def play_quiz(quiz_id: int, login=Depends(get_current_user)):
+async def play_quiz(quiz_id: int, anon: bool, login=Depends(get_current_user)):
     quiz = get_quiz_by_id(quiz_id)
     id_user = get_user_data(login).id
     if quiz and quiz.creator_id == id_user:
         pin = await get_pin()
-        rooms[pin] = {'manager': ConnectionManager(), 'quiz_id': quiz_id}
+        rooms[pin] = {'manager': ConnectionManager(quiz.amount_users), 'quiz_id': quiz_id, 'anon': anon}
         return Response(json.dumps({'pin_code': pin}), 200)
     else:
         raise HTTPException(detail="You are not creator", status_code=403)
+
 
 # @quiz_api.get("/create_room/{id}")
 # async def create_room_url(quiz_id: int, login=Depends(get_current_user)):
@@ -133,10 +141,13 @@ async def play_quiz(quiz_id: int, login=Depends(get_current_user)):
 
 # html routes for test
 # --------
+
+
 @quiz_api.get('/client/session_quiz/{pin}')
-async def client_session_quiz_url(req: Request, pin: int, token: str):
+async def client_session_quiz_url(req: Request, pin: int, token: Optional[str] = None, nickname: Optional[str] = None):
     if rooms.get(pin):
-        return templates.TemplateResponse('index.html', {'request': req, 'pin': pin, 'token': token})
+        return templates.TemplateResponse('index.html', {'request': req, 'pin': pin, 'token': token,
+                                                         'nickname': nickname})
     raise HTTPException(status_code=400)
 
 
@@ -146,24 +157,39 @@ async def client_session_quiz_creator_url(req: Request, pin: int, token: str):
     if rooms.get(pin) and get_quiz_by_id(rooms[pin]['quiz_id']).creator_id == user.id:
         return templates.TemplateResponse('creator.html', {'request': req, 'pin': pin, 'token': token})
     raise HTTPException(status_code=400)
+
+
 # --------
 
 
 @quiz_api.websocket("/session_quiz/{pin}")
-async def session_quiz_url(websocket: WebSocket, pin: int, token: str):
-    user = get_user_data(verify_token(token))
+async def session_quiz_url(websocket: WebSocket, pin: int, token: Optional[str] = None, nickname: Optional[str] = None):
     manager = rooms[pin]['manager']
-    await manager.connect(websocket)
-    await manager.broadcast({"message": f"User {user.nickname} connected!",
-                             "amount_questions": len(get_quiz_by_id(rooms[pin]['quiz_id']).questions_id)})
-    try:
-        while True:
-            data_wb = await websocket.receive_json()
-            if data_wb.get('answer'):
-                manager.append_answer(data_wb['answer']['title'], websocket, user.nickname, user.id)
-    except:
-        manager.disconnect(websocket)
-        await manager.broadcast({"message": f"User {user.nickname} disconnected!"})
+    if token and not rooms[pin]['anon']:
+        user = get_user_data(verify_token(token))
+        await manager.connect(websocket)
+        await manager.broadcast({"message": f"User {user.nickname} connected!",
+                                 "amount_questions": len(get_quiz_by_id(rooms[pin]['quiz_id']).questions_id)})
+        try:
+            while True:
+                data_wb = await websocket.receive_json()
+                if data_wb.get('answer'):
+                    manager.append_answer(data_wb['answer']['title'], websocket, user.nickname, user.id)
+        except:
+            manager.disconnect(websocket)
+            await manager.broadcast({"message": f"User {user.nickname} disconnected!"})
+    elif nickname and rooms[pin]['anon']:
+        await manager.connect(websocket)
+        await manager.broadcast({"message": f"User {nickname} connected!",
+                                 "amount_questions": len(get_quiz_by_id(rooms[pin]['quiz_id']).questions_id)})
+        try:
+            while True:
+                data_wb = await websocket.receive_json()
+                if data_wb.get('answer'):
+                    manager.append_answer(data_wb['answer']['title'], websocket, nickname, anon=True)
+        except:
+            manager.disconnect(websocket)
+            await manager.broadcast({"message": f"User {nickname} disconnected!"})
 
 
 @quiz_api.websocket("/session_quiz_creator/{pin}")
@@ -192,6 +218,7 @@ async def session_quiz_creator_url(websocket: WebSocket, pin: int, token: str):
                                                                question['amount_points'])
                     elif data_wb.get('msg_creator') == 'next':
                         break
+
         timeout = get_timeout_by_id(quiz['timeout_id']).convert_to_secs()
         await wait_for(quiz_func(), timeout=timeout)
         await manager.finish_quiz(pin)

@@ -1,5 +1,8 @@
 from sqlmodel import select
-from db.models.quiz import Quiz, Question, Answer, TimeOut 
+from fastapi import HTTPException
+from typing import Optional
+from db.models.quiz import Quiz, Question, Answer, TimeOut
+from .group import get_group_by_id
 from validation.quiz import AnswerOption, Question as QuestionW, Quiz as QuizW, TimeOut as TimeOutW
 from .user import get_user_data
 from .settings import session
@@ -43,7 +46,7 @@ def create_question(question: QuestionW):
     return question_db.id
 
 
-def create_quiz(quiz: QuestionW):
+def create_quiz(quiz: QuestionW, group_id: Optional[int] = None):
     quiz = dict(quiz)
     questions_id = []
     for question in quiz["questions"]:
@@ -56,26 +59,39 @@ def create_quiz(quiz: QuestionW):
                    questions_id=questions_id,
                    start=quiz["start"],
                    amount_users=quiz["amount_users"])
+    if group_id:
+        quiz_db.group_id = group_id
     session.add(quiz_db)
     session.commit()
     session.refresh(quiz_db)
     return dict(quiz_db)
 
 
-def get_quiz_by_id(id: int):
-    return session.exec(select(Quiz).where(Quiz.id == id)).first()
+def get_quiz_by_id(quiz_id: int):
+    return session.exec(select(Quiz).where(Quiz.id == quiz_id)).first()
 
 
-def get_question_by_id(id: int):
-    return session.exec(select(Question).where(Question.id == id)).first()
+def get_question_by_id(question_id: int):
+    return session.exec(select(Question).where(Question.id == question_id)).first()
 
 
-def get_answer_by_id(id: int):
-    return session.exec(select(Answer).where(Answer.id == id)).first()
+def get_answer_by_id(answer_id: int):
+    return session.exec(select(Answer).where(Answer.id == answer_id)).first()
 
 
-def get_timeout_by_id(id: int):
-    return session.exec(select(TimeOut).where(TimeOut.id == id)).first()
+def get_timeout_by_id(timeout_id: int):
+    return session.exec(select(TimeOut).where(TimeOut.id == timeout_id)).first()
+
+
+def change_group_id(group_id: int, quiz_id: int, login: str):
+    creator_id = get_user_data(login).id
+    quiz = get_quiz_by_id(quiz_id)
+    if quiz and quiz.creator_id == creator_id and get_group_by_id(group_id):
+        quiz = get_quiz_by_id(quiz_id)
+        quiz.group_id = group_id
+        session.commit()
+        return True
+    raise HTTPException(status_code=400, detail="No such quiz, or group, or you're not a creator of this quiz")
 
 
 def query_to_dict(query):
@@ -86,8 +102,8 @@ def query_to_dict(query):
     return res
 
 
-def prepare_question(id: int):
-    question = query_to_dict(get_question_by_id(id))
+def prepare_question(question_id: int):
+    question = query_to_dict(get_question_by_id(question_id))
     question['_answers'] = []
     for a in question['answers_id']:
         answer = query_to_dict(get_answer_by_id(a))
@@ -123,8 +139,8 @@ def sum_points(data: dict):
     session.commit()
 
 
-def start_quiz(id: int):
-    quiz = get_quiz_by_id(id)
+def start_quiz(quiz_id: int):
+    quiz = get_quiz_by_id(quiz_id)
     quiz.start = True
     session.add(quiz)
     session.commit()

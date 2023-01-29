@@ -5,28 +5,31 @@ from db.models.user import Users
 from validation.registration import RegistrationUser
 from security.password import PasswordHash
 from security.jwt import create_token, verify_token
-from .settings import session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def create_user(user: RegistrationUser):
+async def create_user(user: RegistrationUser, session: AsyncSession):
     user = dict(user)
-    if session.exec(select(Users).where(Users.email == user['email'])).first():
+    _r_e = await session.execute(select(Users).where(Users.email == user['email']))
+    if _r_e.scalar_one_or_none():
         raise HTTPException(status_code=400, detail='Email is already registered')
-    elif session.exec(select(Users).where(Users.nickname == user['nickname'])).first():
+    _r_n = await session.execute(select(Users).where(Users.nickname == user['nickname']))
+    if _r_n.scalar_one_or_none():
         raise HTTPException(status_code=400, detail='Nickname is already registered')
     hashed_password = PasswordHash().get_password_hash(user["password"])
     user_db = Users(email=user["email"], hashed_password=hashed_password, nickname=user["nickname"])
     if user.get('phone'):
         user_db.phone = user['phone']
     session.add(user_db)
-    session.commit()
+    await session.commit()
 
     return create_token({'login': user["nickname"]})
 
 
-def login_user(user: OAuth2PasswordRequestForm):
+async def login_user(user: OAuth2PasswordRequestForm, session: AsyncSession):
     user = {'login': user.username, 'password': user.password}
-    result = session.exec(select(Users).where(Users.email == user["login"] or Users.nickname == user["login"])).first()
+    r = await session.execute(select(Users).where(Users.email == user["login"] or Users.nickname == user["login"]))
+    result = r.scalar_one_or_none()
     if result:
         if PasswordHash().verify_password(user["password"], result.hashed_password):
             return create_token({'login': user["login"]})
@@ -36,13 +39,15 @@ def login_user(user: OAuth2PasswordRequestForm):
         raise HTTPException(status_code=400, detail="User non-exists")
 
 
-def validate_email_token(token: str):
+async def validate_email_token(token: str, session: AsyncSession):
     login = verify_token(token)
-    result = session.exec(select(Users).where(Users.email == login or Users.nickname == login)).first()
+    r = await session.execute(select(Users).where(Users.email == login or Users.nickname == login))
+    result = r.scalar_one_or_none()
     result.is_email_verified = True
-    session.commit()
+    await session.commit()
     return True
 
 
-def get_user_data(login: str):
-    return session.exec(select(Users).where(Users.email == login or Users.nickname == login)).first()
+async def get_user_data(login: str, session: AsyncSession):
+    r = await session.execute(select(Users).where(Users.email == login or Users.nickname == login))
+    return r.scalar_one_or_none()

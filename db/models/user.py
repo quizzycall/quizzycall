@@ -9,7 +9,7 @@ class Users(SQLModel, table=True):
     hashed_password: str
     nickname: str
     is_email_verified: bool = Field(default=False)
-    phone: int = Field(default=None)
+    phone: str = Field(default=None)
     is_admin: bool = Field(default=False)
     points: int = Field(default=0, sa_column=Column(BigInteger()))
     groups_id: List[int] = Field(default=[], sa_column=Column(postgresql.ARRAY(Integer())))

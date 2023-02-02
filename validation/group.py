@@ -5,6 +5,7 @@ from typing import List
 class CreateGroup(BaseModel):
     name: str
     description: str
+    users: List[str]
 
 
 class GroupUsers(BaseModel):

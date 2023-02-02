@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from db.settings import init_db
 from routers.quiz import quiz_api
 from routers.user import user_api
 from routers.edit_user import user_edit_api
@@ -10,6 +11,12 @@ app.include_router(quiz_api, prefix="/api/quiz", tags=["quiz"])
 app.include_router(user_api, prefix="/api/user", tags=["user"])
 app.include_router(user_edit_api, prefix="/api/edit-user", tags=["edit user"])
 app.include_router(group_api, prefix="/api/group", tags=["group"])
+
+
+@app.on_event("startup")
+async def on_startup():
+    await init_db()
+
 
 if __name__ == '__main__':
     run('app:app', reload=True, timeout_keep_alive=0)

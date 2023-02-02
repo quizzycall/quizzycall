@@ -15,18 +15,18 @@ async def create(group: CreateGroup, login=Depends(get_current_user), session: A
     return await create_group(login, group, session)
 
 
-@group_api.get('/get-group')
+@group_api.get('/get-group/{group_id}')
 async def get_group(group_id: int, session: AsyncSession = Depends(get_session)):
     return await get_group_by_id(group_id, session)
 
 
-@group_api.post('/add-to-group')
+@group_api.patch('/add-to-group/{group_id}')
 async def add_users_to_group(group_id: int, users: GroupUsers, login=Depends(get_current_user),
                              session: AsyncSession = Depends(get_session)):
     return await add_users(users, group_id, login, session)
 
 
-@group_api.post('/delete-from-group')
+@group_api.patch('/delete-from-group/{group_id}')
 async def delete_users_from_group(group_id: int, users: GroupUsers, login=Depends(get_current_user),
                                   session: AsyncSession = Depends(get_session)):
     return await delete_users(users, group_id, login, session)
@@ -42,7 +42,7 @@ async def delete_users_from_group(group_id: int, users: GroupUsers, login=Depend
 #     return create_quiz(quiz, group_id=group_id)
 
 
-@group_api.post("/change-quiz-group-id")
-async def change_group_id_of_quiz(quiz_id: int, group_id: int, login=Depends(get_current_user),
+@group_api.patch("/change-group-id-of-quiz/{group_id}/{quiz_id}")
+async def change_group_id_of_quiz(group_id: int, quiz_id: int, login=Depends(get_current_user),
                                   session: AsyncSession = Depends(get_session)):
     return await change_group_id(group_id, quiz_id, login, session)

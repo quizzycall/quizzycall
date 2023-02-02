@@ -20,18 +20,18 @@ async def create_quiz_url(quiz: QuizVal, login=Depends(get_current_user), sessio
     return await create_quiz(quiz, login, session)
 
 
-@quiz_api.post('/edit-quiz')
+@quiz_api.patch('/edit-quiz/{quiz_id}')
 async def edit_quiz_url(quiz_id: int, quiz_edit: QuizEdit, login=Depends(get_current_user),
                         session: AsyncSession = Depends(get_session)):
     return await edit_quiz(quiz_id, quiz_edit, login, session)
 
 
-@quiz_api.get("/get_quiz/{id}")
+@quiz_api.get("/get_quiz/{quiz_id}")
 async def get_quiz_url(quiz_id: int, session: AsyncSession = Depends(get_session)):
     return dict(await get_quiz_by_id(quiz_id, session))
 
 
-@quiz_api.get("/play_quiz/{id}")
+@quiz_api.get("/play_quiz/{quiz_id}")
 async def play_quiz_url(quiz_id: int, anon: bool, login=Depends(get_current_user),
                         session: AsyncSession = Depends(get_session)):
     return await play_quiz(quiz_id, login, anon, session)

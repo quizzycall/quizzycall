@@ -9,7 +9,7 @@ class AnswerOption(BaseModel):
 
 class Question(BaseModel):
     title: str
-    answer_options: list[AnswerOption]
+    answers: list[AnswerOption]
     amount_points: int
 
 
@@ -33,7 +33,6 @@ class Quiz(BaseModel):
     questions: list[Question]
     max_points: int
     amount_users: int
-    start: bool = False
 
 
 class AnswerOptionEdit(AnswerOption):
@@ -43,14 +42,15 @@ class AnswerOptionEdit(AnswerOption):
 
 
 class QuestionEdit(BaseModel):
+    id: int
     title: Optional[str] = None
-    answer_options: Optional[list[AnswerOptionEdit]] = None
+    answers: Optional[list[AnswerOptionEdit]] = None
     amount_points: Optional[int] = None
-    right_answer_id: Optional[int] = None
 
 
 class QuizEdit(BaseModel):
     title: Optional[str] = None
+    group_id: Optional[int] = None
     timeout: Optional[TimeOutEdit] = None
     questions: Optional[list[QuestionEdit]] = None
     max_points: Optional[int] = None

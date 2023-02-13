@@ -15,9 +15,14 @@ quiz_api = APIRouter()
 templates = Jinja2Templates(directory='templates')
 
 
-@quiz_api.post("/create_quiz")
+@quiz_api.post("/create-quiz")
 async def create_quiz_url(quiz: QuizVal, login=Depends(get_current_user), session: AsyncSession = Depends(get_session)):
     return await create_quiz(quiz, login, session)
+
+
+@quiz_api.get("/get-quiz/{quiz_id}")
+async def get_quiz_url(quiz_id: int, session: AsyncSession = Depends(get_session)):
+    return dict(await get_quiz_by_id(quiz_id, session))
 
 
 @quiz_api.patch('/edit-quiz/{quiz_id}')
@@ -26,13 +31,14 @@ async def edit_quiz_url(quiz_id: int, quiz_edit: QuizEdit, login=Depends(get_cur
     return await edit_quiz(quiz_id, quiz_edit, login, session)
 
 
-@quiz_api.get("/get_quiz/{quiz_id}")
-async def get_quiz_url(quiz_id: int, session: AsyncSession = Depends(get_session)):
-    return dict(await get_quiz_by_id(quiz_id, session))
+# @quiz_api.patch("/change-group-id-of-quiz/{group_id}/{quiz_id}")
+# async def change_group_id_of_quiz(group_id: int, quiz_id: int, login=Depends(get_current_user),
+#                                   session: AsyncSession = Depends(get_session)):
+#     return await change_group_id(group_id, quiz_id, login, session)
 
 
-@quiz_api.get("/play_quiz/{quiz_id}")
-async def play_quiz_url(quiz_id: int, anon: bool, login=Depends(get_current_user),
+@quiz_api.get("/play-quiz/{quiz_id}")
+async def play_quiz_url(quiz_id: int, anon: Optional[bool] = True, login=Depends(get_current_user),
                         session: AsyncSession = Depends(get_session)):
     return await play_quiz(quiz_id, login, anon, session)
 
@@ -41,7 +47,7 @@ async def play_quiz_url(quiz_id: int, anon: bool, login=Depends(get_current_user
 # --------
 
 
-@quiz_api.get('/client/session_quiz/{pin}')
+@quiz_api.get('/client/session-quiz/{pin}')
 async def client_session_quiz_url(req: Request, pin: int, token: Optional[str] = None, nickname: Optional[str] = None):
     if rooms.get(pin):
         return templates.TemplateResponse('index.html', {'request': req, 'pin': pin, 'token': token,
@@ -49,7 +55,7 @@ async def client_session_quiz_url(req: Request, pin: int, token: Optional[str] =
     raise HTTPException(status_code=400)
 
 
-@quiz_api.get('/client/session_quiz_creator/{pin}')
+@quiz_api.get('/client/session-quiz-creator/{pin}')
 async def client_session_quiz_creator_url(req: Request, pin: int, token: str,
                                           session: AsyncSession = Depends(get_session)):
     user = await get_user_data(verify_token(token), session)
@@ -62,13 +68,13 @@ async def client_session_quiz_creator_url(req: Request, pin: int, token: str,
 # --------
 
 
-@quiz_api.websocket("/session_quiz/{pin}")
+@quiz_api.websocket("/session-quiz/{pin}")
 async def session_quiz_url(websocket: WebSocket, pin: int, token: Optional[str] = None, nickname: Optional[str] = None,
                            session: AsyncSession = Depends(get_session)):
     await session_quiz(websocket, pin, session, token, nickname)
 
 
-@quiz_api.websocket("/session_quiz_creator/{pin}")
+@quiz_api.websocket("/session-quiz-creator/{pin}")
 async def session_quiz_creator_url(websocket: WebSocket, pin: int, token: str,
                                    session: AsyncSession = Depends(get_session)):
     await session_quiz_creator(websocket, pin, token, session)

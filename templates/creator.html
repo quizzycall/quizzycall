@@ -14,7 +14,7 @@
 
         </ul>
         <script>
-            var ws = new WebSocket("ws://localhost:8000/api/quiz/session_quiz_creator/{{pin}}?token={{token}}");;
+            var ws = new WebSocket("ws://localhost:8000/api/quiz/session-quiz-creator/{{pin}}?token={{token}}");;
 
             function cellClick(id) {
                 ws.send(JSON.stringify({msg_creator: id}))

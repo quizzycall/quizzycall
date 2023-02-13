@@ -1,7 +1,7 @@
 # user.py
 # ----------
 
-## /registration_user и /login_user 
+## /registration-user и /login-user 
 ### здесь регистрация/авторизация. можешь если че здесь посмотреть как сделать: https://github.com/Buuntu/fastapi-react/tree/master/%7B%7Bcookiecutter.project_slug%7D%7D/frontend/src/views
 
 ## /email-validation
@@ -11,25 +11,25 @@
 # edit_user.py
 # ----------
 
-## /change-password-with-old-password
+## /change-password-with-old-password/новый пароль/старый пароль
 ### меняет введенный старый пароль на новый.
 
-## /change-password-with-email
+## /change-password-with-email/новый пароль
 ### меняет пароль, отправляя подтверждение на емейл.
 
-## /change-password-with-email-validation
+## /change-password-with-email-validation/токен
 ### сюда юзер переходит по ссылке из подтверждения о смене пароля.
 
-## /change-email
+## /change-email/новый емейл
 ### меняет емейл, отправляя подтверждение на новый емейл
 
-## /change-email-validation
+## /change-email-validation/токен
 ### сюда юзер переходит по ссылке из подтверждения о смене почты.
 
-## /change-nickname
+## /change-nickname/новый ник
 ### меняет ник
 
-## /change-phone-number
+## /change-phone-number/новый номер
 ### меняет номер телефона
 
 # ----------
@@ -48,9 +48,6 @@
 ## /delete-from-group/{group_id}
 ### удаляет юзеров(по никнейму) из группы
 
-## /change-group-id-of-quiz/{group_id}/{quiz_id}
-### меняет айди группы в квизе
-
 # ----------
 # quiz.py
 # ----------
@@ -61,15 +58,15 @@
 ## /edit-quiz/{quiz_id}
 ### редактирование квиза
 
-## /get_quiz/{quiz_id}
+## /get-quiz/{quiz_id}
 ### получение квиза по айди
 
-## /play_quiz/{quiz_id}
+## /play-quiz/{quiz_id}
 ### старт квиза. возвращает пин-код по которому игроки и создатель должны присоединиться.
 
-## /client/session_quiz/{pin} и /client/session_quiz_creator/{pin}
+## /client/session-quiz/{pin} и /client/session-quiz-creator/{pin}
 ### это тестовые html странички, можно не трогать
 
-## /session_quiz/{pin} и /session_quiz_creator/{pin}
+## /session-quiz/{pin} и /session-quiz-creator/{pin}
 ### сокеты для юзера и создателя
 

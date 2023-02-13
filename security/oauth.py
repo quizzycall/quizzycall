@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security.oauth2 import OAuth2PasswordBearer
 from security.jwt import verify_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/user/login_user', auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/user/login-user', auto_error=False)
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):

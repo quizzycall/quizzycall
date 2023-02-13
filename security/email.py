@@ -39,7 +39,7 @@ async def send_change_password_email(email: EmailStr, url: str, back_tasks: Back
 
     fm = FastMail(conf)
     back_tasks.add_task(fm.send_message, message)
-    return {'msg': 'Password change email was sent'}
+    return True
 
 
 async def send_email_changing(new_email: EmailStr, url: str, back_tasks: BackgroundTasks):

@@ -85,7 +85,7 @@ async def play_quiz(quiz_id: int, login: str, anon: bool, session: AsyncSession)
     quiz = await get_quiz_by_id(quiz_id, session)
     _u = await get_user_data(login, session)
     id_user = _u.id
-    if quiz and quiz.creator_id == id_user:
+    if quiz.creator_id == id_user:
         pin = await get_pin(rooms)
         rooms[pin] = {'manager': ConnectionManager(quiz.amount_users), 'quiz_id': quiz_id, 'anon': anon}
         return Response(json.dumps({'pin_code': pin}), 200)

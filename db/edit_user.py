@@ -16,14 +16,13 @@ async def change_password_with_old_password(new_pass: str, old_pass: str, login:
     return {'msg': 'Password changed'}
 
 
-async def send_change_password_with_email(new_pass: str, url: str, login: str, back_tasks: BackgroundTasks,
-                                          session: AsyncSession):
+async def change_password_with_email(new_pass: str, login: str, session: AsyncSession):
     user = await get_user_data(login, session)
     if not user.is_email_verified:
         raise HTTPException(status_code=400, detail='Email is not verified')
     token = create_token({'login': login, 'new_pass': new_pass})
-    await send_change_password_email(user.email, url + f'?token={token}', back_tasks)
-    return {'msg': 'Password change email was sent'}
+    #await send_change_password_email(user.email, url + f'?token={token}', back_tasks)
+    return {'status': 200, 'token': token, 'email': user.email}
 
 
 async def change_password_after_email(token: str, session: AsyncSession):
@@ -37,11 +36,9 @@ async def change_password_after_email(token: str, session: AsyncSession):
         raise HTTPException(status_code=400, detail='Invalid token')
 
 
-async def change_email(new_email: EmailStr, url: str, login: str, back_tasks: BackgroundTasks):
+async def change_email(new_email: EmailStr, login: str):
     token = create_token({'new_email': new_email, 'login': login})
-    url += f'?token={token}'
-    await send_email_changing(new_email, url, back_tasks)
-    return {'msg': 'Email changing was sent'}
+    return {'status': 200, 'token': token}
 
 
 async def change_email_validation(token: str, session: AsyncSession):

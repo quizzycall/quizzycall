@@ -1,10 +1,11 @@
 import random
+from typing import List
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from db.models.quiz import Quiz, Question, Answer, TimeOut
 from .group import get_group_by_id
-from validation.quiz import AnswerOption, Question as QuestionVal, Quiz as QuizVal, TimeOut as TimeOutW, QuizEdit
+from validation.quiz import AnswerOption, Question as QuestionVal, Quiz as QuizVal, TimeOut as TimeOutW, QuizEdit, TimeOutEdit, QuestionEdit, AnswerOptionEdit
 from .user import get_user_data
 
 
@@ -28,7 +29,7 @@ async def create_question(question: QuestionVal, session: AsyncSession):
     question = dict(question)
     right_answer_id = 0
     list_answers_ids = []
-    for answer in question["answer_options"]:
+    for answer in question["answers"]:
         answer = dict(answer)
         if answer["is_right"]:
             right_answer_db = await create_answer(answer, session)
@@ -53,7 +54,7 @@ async def create_quiz(quiz: QuizVal, login: str, session: AsyncSession):
     if quiz['group_id']:
         group = await get_group_by_id(quiz['group_id'], session)
         if group.creator_id != creator_id:
-            raise HTTPException(status_code=400, detail="You're not a creator of this group, you can't add it")
+            raise HTTPException(status_code=403, detail="You're not a creator of this group")
     quiz["creator_id"] = creator_id
     questions_id = []
     for question in quiz["questions"]:
@@ -64,7 +65,6 @@ async def create_quiz(quiz: QuizVal, login: str, session: AsyncSession):
                    max_points=quiz["max_points"],
                    timeout_id=await create_timeout(quiz["timeout"], session),
                    questions_id=questions_id,
-                   start=quiz["start"],
                    amount_users=quiz["amount_users"],
                    group_id=quiz['group_id'])
     session.add(quiz_db)
@@ -75,7 +75,23 @@ async def create_quiz(quiz: QuizVal, login: str, session: AsyncSession):
 
 async def get_quiz_by_id(quiz_id: int, session: AsyncSession):
     r = await session.execute(select(Quiz).where(Quiz.id == quiz_id))
-    return r.scalar_one_or_none()
+    r = r.scalar_one_or_none()
+    if not r:
+        raise HTTPException(status_code=404, detail='No such quiz')
+    return r
+
+
+async def get_quiz_by_id_dict(quiz_id: int, session: AsyncSession):
+    r = await session.execute(select(Quiz).where(Quiz.id == quiz_id))
+    r = r.scalar_one_or_none()
+    if not r:
+        raise HTTPException(status_code=404, detail='No such quiz')
+    res = r.dict().copy()
+    del res['timeout_id']
+    res['timeout'] = await get_timeout_by_id(r.timeout_id, session)
+    res['questions'] = await get_questions_and_answers_by_id(res['questions_id'], session)
+    del res['questions_id']
+    return res
 
 
 async def get_question_by_id(question_id: int, session: AsyncSession):
@@ -88,20 +104,23 @@ async def get_answer_by_id(answer_id: int, session: AsyncSession):
     return r.scalar_one_or_none()
 
 
+async def get_questions_and_answers_by_id(questions_id: list, session: AsyncSession):
+    result = []
+    for question_id in questions_id:
+        question = await session.execute(select(Question).where(Question.id == question_id))
+        question = question.scalar_one_or_none().dict().copy()
+        question['answers'] = []
+        for answer_id in question['answers_id']:
+            answer = await get_answer_by_id(answer_id, session)
+            question['answers'].append(answer.dict().copy())
+        del question['answers_id']
+        result.append(question)
+    return result
+
+
 async def get_timeout_by_id(timeout_id: int, session: AsyncSession):
     r = await session.execute(select(TimeOut).where(TimeOut.id == timeout_id))
     return r.scalar_one_or_none()
-
-
-async def change_group_id(group_id: int, quiz_id: int, login: str, session: AsyncSession):
-    _u = await get_user_data(login, session)
-    creator_id = _u.id
-    quiz = await get_quiz_by_id(quiz_id, session)
-    if quiz and quiz.creator_id == creator_id and await get_group_by_id(group_id, session):
-        quiz.group_id = group_id
-        await session.commit()
-        return True
-    raise HTTPException(status_code=400, detail="No such quiz, or group, or you're not a creator of this quiz")
 
 
 def query_to_dict(query):
@@ -164,16 +183,72 @@ async def start_quiz(quiz_id: int, session: AsyncSession):
     await session.refresh(quiz)
 
 
+# async def change_group_id(group_id: int, quiz_id: int, login: str, session: AsyncSession):
+#     _u = await get_user_data(login, session)
+#     creator_id = _u.id
+#     quiz = await get_quiz_by_id(quiz_id, session)
+#     if quiz.creator_id == creator_id and await get_group_by_id(group_id, session):
+#         quiz.group_id = group_id
+#         await session.commit()
+#         return True
+#     raise HTTPException(status_code=403, detail="You're not a creator of this quiz")
+
+
+async def checking_to_change_group_id(group_id: int, creator_id: int, quiz: Quiz, session: AsyncSession):
+    if quiz.creator_id == creator_id and await get_group_by_id(group_id, session):
+        quiz.group_id = group_id
+        return True
+    raise HTTPException(status_code=403, detail="You're not a creator of this quiz")
+
+
+async def editing_answers(new_answers: List[dict], session: AsyncSession):
+    is_right = None
+    for new_answer in new_answers:
+        answer = await get_answer_by_id(new_answer['id'], session)
+        for k, v in new_answer.items():
+            if k == 'is_right':
+                if v:
+                    is_right = new_answer['id']
+            else:
+                setattr(answer, k, v)
+
+    return is_right
+
+
+async def editing_timeout(timeout_id: int, new_timeout: dict, session: AsyncSession):
+    timeout = await get_timeout_by_id(timeout_id, session)
+    for k1, v1 in new_timeout.items():
+        setattr(timeout, k1, v1)
+
+
+async def editing_questions(new_questions: List[dict], session: AsyncSession):
+    for new_question in new_questions:
+        question = await get_question_by_id(new_question['id'], session)
+        for k, v in new_question.items():
+            if k == 'answers':
+                setattr(question, 'right_answer_id', await editing_answers(v, session))
+            else:
+                setattr(question, k, v)
+
+
 async def edit_quiz(quiz_id: int, quiz_edit: QuizEdit, login: str, session: AsyncSession):
     user = await get_user_data(login, session)
     quiz_edit = quiz_edit.dict(exclude_unset=True)
     quiz = await get_quiz_by_id(quiz_id, session)
-    group = await get_group_by_id(quiz.group_id, session)
+    group = await get_group_by_id(quiz_edit['group_id'], session)
     if user.id == quiz.creator_id or user.id in group.participants_id:
         for k, v in quiz_edit.items():
-            setattr(quiz, k, v)
+            if k == 'group_id':
+                if await checking_to_change_group_id(v, group.creator_id, quiz, session):
+                    setattr(quiz, k, v)
+            elif k == 'timeout':
+                await editing_timeout(quiz.timeout_id, v, session)
+            elif k == 'questions':
+                await editing_questions(v, session)
+            else:
+                setattr(quiz, k, v)
         await session.commit()
         await session.refresh(quiz)
         return quiz
-    raise HTTPException(status_code=400, detail="You can't edit this quiz")
+    raise HTTPException(status_code=403, detail="You can't edit this quiz")
 

@@ -6,6 +6,7 @@ class Config:
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
     PSQL_URL = os.getenv("PSQL_URL")
+    TEST_DB = os.getenv("TEST_DB")
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 587
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')

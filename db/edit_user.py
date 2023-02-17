@@ -1,10 +1,9 @@
-from fastapi import HTTPException, BackgroundTasks
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import EmailStr
 from security.password import PasswordHash
 from security.jwt import create_token, decode_token
 from .user import get_user_data
-from security.email import send_change_password_email, send_email_changing
 
 
 async def change_password_with_old_password(new_pass: str, old_pass: str, login: str, session: AsyncSession):
@@ -21,7 +20,6 @@ async def change_password_with_email(new_pass: str, login: str, session: AsyncSe
     if not user.is_email_verified:
         raise HTTPException(status_code=400, detail='Email is not verified')
     token = create_token({'login': login, 'new_pass': new_pass})
-    #await send_change_password_email(user.email, url + f'?token={token}', back_tasks)
     return {'status': 200, 'token': token, 'email': user.email}
 
 

@@ -45,7 +45,6 @@ async def validate_email_token(token: str, session: AsyncSession):
     result = r.scalar_one_or_none()
     result.is_email_verified = True
     await session.commit()
-    print(45787845784578388338)
     return True
 
 

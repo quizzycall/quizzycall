@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from db.models.quiz import Quiz, Question, Answer, TimeOut
 from .group import get_group_by_id
-from validation.quiz import AnswerOption, Question as QuestionVal, Quiz as QuizVal, TimeOut as TimeOutW, QuizEdit, TimeOutEdit, QuestionEdit, AnswerOptionEdit
+from validation.quiz import AnswerOption, Question as QuestionVal, Quiz as QuizVal, TimeOut as TimeOutW, QuizEdit
 from .user import get_user_data
 
 
@@ -181,17 +181,6 @@ async def start_quiz(quiz_id: int, session: AsyncSession):
     session.add(quiz)
     await session.commit()
     await session.refresh(quiz)
-
-
-# async def change_group_id(group_id: int, quiz_id: int, login: str, session: AsyncSession):
-#     _u = await get_user_data(login, session)
-#     creator_id = _u.id
-#     quiz = await get_quiz_by_id(quiz_id, session)
-#     if quiz.creator_id == creator_id and await get_group_by_id(group_id, session):
-#         quiz.group_id = group_id
-#         await session.commit()
-#         return True
-#     raise HTTPException(status_code=403, detail="You're not a creator of this quiz")
 
 
 async def checking_to_change_group_id(group_id: int, creator_id: int, quiz: Quiz, session: AsyncSession):

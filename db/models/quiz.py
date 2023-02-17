@@ -10,7 +10,6 @@ class Quiz(SQLModel, table=True):
     max_points: int
     timeout_id: int = Field(default=None, foreign_key="timeout.id")
     questions_id: List[int] = Field(default=None, sa_column=Column(postgresql.ARRAY(Integer())))
-    start: bool = False
     amount_users: int
     group_id: int = None
 

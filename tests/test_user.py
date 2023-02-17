@@ -1,6 +1,8 @@
 from httpx import AsyncClient
 import pytest
 from validation.registration import RegistrationUser
+from db.user import get_user_data
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.order(1)
@@ -10,11 +12,13 @@ from validation.registration import RegistrationUser
     ('3@example.com', '3', '3'),
     ('4@example.com', '4', '4')
 ])
-async def test_registration_user(ac: AsyncClient, email, nickname, password):
+async def test_registration_user(ac: AsyncClient, session: AsyncSession, email, nickname, password):
     reg_data = RegistrationUser(email=email, nickname=nickname, password=password)
     res = await ac.post('/api/user/registration-user', json=reg_data.dict())
     ac.headers[f'user_{nickname}_token'] = res.json().get('access_token')
     assert res.status_code == 200
+    user = await get_user_data(nickname, session)
+    assert user.nickname == nickname
 
 
 @pytest.mark.parametrize('email, nickname, password', [
@@ -55,6 +59,8 @@ async def test_login_usr_error(ac: AsyncClient, username, password):
 
 
 @pytest.mark.order(7)
-async def test_email_validation(ac: AsyncClient):
+async def test_email_validation(ac: AsyncClient, session: AsyncSession):
     res = await ac.get(f'/api/user/email-validation/{ac.headers["token"]}')
     assert res.status_code == 200
+    user = await get_user_data('11', session)
+    assert user.is_email_verified is True

@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient
-from db.quiz import get_quiz_by_id_dict, get_timeout_by_id, get_quiz_by_id
+from db.quiz import get_quiz_by_id_dict, get_timeout_by_id
 from sqlalchemy.ext.asyncio import AsyncSession
 from validation.quiz import Quiz, QuizEdit, TimeOut, Question, AnswerOption, TimeOutEdit, QuestionEdit, AnswerOptionEdit
 

@@ -15,8 +15,6 @@ engine_test = create_async_engine(cfg.TEST_DB, pool_pre_ping=True, echo=True, fu
 async_session_maker = sessionmaker(engine_test, class_=AsyncSession, expire_on_commit=False)
 metadata.bind = engine_test
 
-domain = "http://127.0.0.1:8000"
-
 
 async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:

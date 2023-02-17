@@ -9,7 +9,6 @@ from security.oauth import get_current_user
 from db.user import get_user_data
 from db.quiz_websocket import play_quiz, rooms, session_quiz, session_quiz_creator
 from db.settings import get_session
-from db.models.quiz import Quiz
 
 quiz_api = APIRouter()
 templates = Jinja2Templates(directory='templates')
@@ -29,12 +28,6 @@ async def get_quiz_url(quiz_id: int, session: AsyncSession = Depends(get_session
 async def edit_quiz_url(quiz_id: int, quiz_edit: QuizEdit, login=Depends(get_current_user),
                         session: AsyncSession = Depends(get_session)):
     return await edit_quiz(quiz_id, quiz_edit, login, session)
-
-
-# @quiz_api.patch("/change-group-id-of-quiz/{group_id}/{quiz_id}")
-# async def change_group_id_of_quiz(group_id: int, quiz_id: int, login=Depends(get_current_user),
-#                                   session: AsyncSession = Depends(get_session)):
-#     return await change_group_id(group_id, quiz_id, login, session)
 
 
 @quiz_api.get("/play-quiz/{quiz_id}")

@@ -19,8 +19,6 @@ async def create_group(login: str, group: CreateGroup, session: AsyncSession):
             raise HTTPException(status_code=400, detail=f'No such user with nickname {nickname}')
         _u.groups_id.append(group_db.id)
         flag_modified(_u, 'groups_id')
-        group_db.participants_id.append(user.id)
-    flag_modified(group_db, 'participants_id')
     user.groups_id.append(group_db.id)
     flag_modified(user, 'groups_id')
     await session.commit()
@@ -38,7 +36,6 @@ async def get_group_by_id(group_id: int, session: AsyncSession) -> Group:
 async def add_users(users: GroupUsers, group_id: int, login: str, session: AsyncSession):
     group = await get_group_by_id(group_id, session)
     _u = await get_user_data(login, session)
-    print(_u.id, group.creator_id)
     if group.creator_id == _u.id:
         for nickname in users.users:
             user = await get_user_data(nickname, session)

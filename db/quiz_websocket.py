@@ -6,7 +6,7 @@ import traceback
 from fastapi import Response, WebSocket, HTTPException
 from starlette.concurrency import run_in_threadpool
 from typing import List, Dict, Optional
-from db.quiz import get_quiz_by_id, start_quiz, query_to_dict, prepare_question, sum_points, get_timeout_by_id, get_pin
+from db.quiz import get_quiz_by_id, query_to_dict, prepare_question, sum_points, get_timeout_by_id, get_pin
 from security.jwt import verify_token
 from db.user import get_user_data
 
@@ -87,7 +87,8 @@ async def play_quiz(quiz_id: int, login: str, anon: bool, session: AsyncSession)
     id_user = _u.id
     if quiz.creator_id == id_user:
         pin = await get_pin(rooms)
-        rooms[pin] = {'manager': ConnectionManager(quiz.amount_users), 'quiz_id': quiz_id, 'anon': anon}
+        rooms[pin] = {'manager': ConnectionManager(quiz.amount_users), 'quiz_id': quiz_id, 'anon': anon,
+                      'is_started': False}
         return Response(json.dumps({'pin_code': pin}), 200)
     else:
         raise HTTPException(detail="You are not creator", status_code=403)
@@ -95,6 +96,10 @@ async def play_quiz(quiz_id: int, login: str, anon: bool, session: AsyncSession)
 
 async def session_quiz(websocket: WebSocket, pin: int, session: AsyncSession, token: Optional[str] = None,
                        nickname: Optional[str] = None):
+    if rooms[pin]['is_started']:
+        await websocket.accept()
+        await websocket.send_json({'msg': 'Quiz is already started'})
+        return
     manager = rooms[pin]['manager']
     quiz = await get_quiz_by_id(rooms[pin]['quiz_id'], session)
     if token and not rooms[pin]['anon']:
@@ -133,7 +138,10 @@ async def session_quiz_creator(websocket: WebSocket, pin: int, token: str, sessi
         while True:
             data_wb = await websocket.receive_json()
             if data_wb.get('msg_creator') == 'started':
-                await start_quiz(quiz_id, session)
+                if len(manager.active_connections) < 2:
+                    await websocket.send_json({'msg': "You can't start if there is no players"})
+                    continue
+                rooms[pin]['is_started'] = True
                 await manager.broadcast({'msg': 'started'})
                 break
         quiz = query_to_dict(await get_quiz_by_id(quiz_id, session))

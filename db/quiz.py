@@ -175,14 +175,6 @@ async def get_pin(rooms: dict):
             return pin
 
 
-async def start_quiz(quiz_id: int, session: AsyncSession):
-    quiz = await get_quiz_by_id(quiz_id, session)
-    quiz.start = True
-    session.add(quiz)
-    await session.commit()
-    await session.refresh(quiz)
-
-
 async def checking_to_change_group_id(group_id: int, creator_id: int, quiz: Quiz, session: AsyncSession):
     if quiz.creator_id == creator_id and await get_group_by_id(group_id, session):
         quiz.group_id = group_id

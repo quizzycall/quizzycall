@@ -26,12 +26,14 @@ async def create_user(user: RegistrationUser, session: AsyncSession):
     return create_token({'login': user["nickname"]})
 
 
-async def login_user(user: OAuth2PasswordRequestForm, session: AsyncSession):
+async def login_user(user: OAuth2PasswordRequestForm, session: AsyncSession, is_testing=False):
     user = {'login': user.username, 'password': user.password}
     r = await session.execute(select(Users).where(Users.email == user["login"] or Users.nickname == user["login"]))
     result = r.scalar_one_or_none()
     if result:
-        if PasswordHash().verify_password(user["password"], result.hashed_password):
+        if not is_testing and not result.is_email_verified:
+            raise HTTPException(status_code=400, detail="You need to validate your email before logging in")
+        elif PasswordHash().verify_password(user["password"], result.hashed_password):
             return create_token({'login': user["login"]})
         else:
             raise HTTPException(status_code=400, detail="Wrong password!")
@@ -50,4 +52,9 @@ async def validate_email_token(token: str, session: AsyncSession):
 
 async def get_user_data(login: str, session: AsyncSession):
     r = await session.execute(select(Users).where(Users.email == login or Users.nickname == login))
+    return r.scalar_one_or_none()
+
+
+async def get_user_by_email(email: str, session: AsyncSession):
+    r = await session.execute(select(Users).where(Users.email == email))
     return r.scalar_one_or_none()

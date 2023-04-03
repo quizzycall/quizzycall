@@ -66,3 +66,8 @@ async def test_change_user_email(ac: AsyncClient, session: AsyncSession):
     user = await get_user_data('11', session)
     assert user.email == '11@example.com'
 
+
+async def test_change_user_email_error(ac: AsyncClient, session: AsyncSession):
+    res = await ac.patch(f"/api/edit-user/change-email/11@example.com")
+    assert res.status_code == 400
+

@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from db.settings import get_session, metadata
-from security.config import Config as cfg
+from security.config import Config as cfg, testing
 from app import app
 engine_test = create_async_engine(cfg.TEST_DB, pool_pre_ping=True, echo=True, future=True, poolclass=NullPool)
 async_session_maker = sessionmaker(engine_test, class_=AsyncSession, expire_on_commit=False)
@@ -20,7 +20,13 @@ async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
 
+
+def override_testing():
+    return True
+
+
 app.dependency_overrides[get_session] = override_get_session
+app.dependency_overrides[testing] = override_get_session
 
 
 @pytest.fixture

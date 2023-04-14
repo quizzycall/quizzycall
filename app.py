@@ -7,7 +7,7 @@ from routers.edit_user import user_edit_api
 from routers.group import group_api
 from uvicorn import run
 
-app = FastAPI()
+app = FastAPI(openapi_url="/api/openapi.json")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -16,10 +16,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.include_router(quiz_api, prefix="/api/quiz", tags=["quiz"])
-app.include_router(user_api, prefix="/api/user", tags=["user"])
-app.include_router(user_edit_api, prefix="/api/edit-user", tags=["edit user"])
-app.include_router(group_api, prefix="/api/group", tags=["group"])
+app.include_router(quiz_api, prefix="/quiz", tags=["quiz"])
+app.include_router(user_api, prefix="/user", tags=["user"])
+app.include_router(user_edit_api, prefix="/edit-user", tags=["edit user"])
+app.include_router(group_api, prefix="/group", tags=["group"])
 
 
 @app.on_event("startup")
